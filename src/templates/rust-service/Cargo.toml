@@ -1,0 +1,31 @@
+[package]
+name = "{{project-name}}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.36", features = ["full"] }
+axum = { version = "0.7", features = ["http2"] }
+tower-http = { version = "0.5", features = ["trace"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1.0"
+lambda_runtime = "0.8"
+lambda_http = { version = "0.8", features = ["tower"] }
+http-body-util = "0.1"
+uuid = { version = "1.6", features = ["v4"] }
+tower = "0.4"
+
+[[bin]]
+name = "server"
+path = "src/services/server.rs"
+
+[[bin]]
+name = "{{project-name}}_lambda"
+path = "src/services/lambda.rs"
+
+[lib]
+name = "{{crate_name}}"
+path = "src/lib.rs" 

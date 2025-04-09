@@ -1,0 +1,39 @@
+[package]
+name = "my_test_service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { version = "0.7", features = ["multipart"] }
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+qrcode = "0.12"
+image = "0.24"
+base64 = "0.22.1"
+clap = { version = "4.4", features = ["derive"] }
+num_cpus = "1.16"
+tower = "0.5.1"
+serde_json = "1.0.133"
+reqwest = "0.12.9"
+lazy_static = "1.5.0"
+regex = "1.11.1"
+tower-http = { version = "0.6.2", features = ["limit"] }
+lambda_http = { version = "0.14.0", features = ["tracing"] }
+uuid = { version = "1.16.0", features = ["v4"] }
+http-body-util = "0.1.2"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+openssl-sys = { version = "0.9.106", features = ["vendored"] }
+
+
+[[bin]]
+name = "my_test_service_lambda"
+path = "src/services/lambda.rs"
+
+[[bin]]
+name = "server"
+path = "src/main.rs"
+
+[lib]
+name = "my_test_service"
+path = "src/lib.rs"
