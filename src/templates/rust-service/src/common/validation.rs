@@ -1,10 +1,13 @@
 use axum::http::HeaderMap;
+use std::env;
 
 // Error types
 #[derive(Debug)]
 pub enum ValidationError {
     #[allow(dead_code)]
     RapidApi(String),
+    #[allow(dead_code)]
+    EnvVar(String),
 }
 
 pub struct RapidApiConfig {
@@ -20,6 +23,17 @@ impl RapidApiConfig {
             proxy_secret: proxy_secret.to_string(),
             host: host.to_string(),
         }
+    }
+
+    pub fn from_env() -> Result<Self, ValidationError> {
+        Ok(Self {
+            api_key: env::var("RAPIDAPI_KEY")
+                .map_err(|_| ValidationError::EnvVar("RAPIDAPI_KEY environment variable not set".to_string()))?,
+            proxy_secret: env::var("RAPIDAPI_PROXY_SECRET")
+                .map_err(|_| ValidationError::EnvVar("RAPIDAPI_PROXY_SECRET environment variable not set".to_string()))?,
+            host: env::var("RAPIDAPI_HOST")
+                .map_err(|_| ValidationError::EnvVar("RAPIDAPI_HOST environment variable not set".to_string()))?,
+        })
     }
 }
 

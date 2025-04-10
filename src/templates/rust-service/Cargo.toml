@@ -4,28 +4,31 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.36", features = ["full"] }
-axum = { version = "0.7", features = ["http2"] }
-tower-http = { version = "0.5", features = ["trace"] }
+axum = { version = "0.7", features = ["multipart"] }
+tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+qrcode = "0.12"
+image = "0.24"
+base64 = "0.22.1"
+clap = { version = "4.4", features = ["derive"] }
+num_cpus = "1.16"
+tower = "0.5.1"
+serde_json = "1.0.133"
+reqwest = "0.12.9"
+lazy_static = "1.5.0"
+regex = "1.11.1"
+tower-http = { version = "0.6.2", features = ["limit"] }
+lambda_http = { version = "0.14.0", features = ["tracing"] }
+uuid = { version = "1.16.0", features = ["v4"] }
+http-body-util = "0.1.2"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-anyhow = "1.0"
-lambda_runtime = "0.8"
-lambda_http = { version = "0.8", features = ["tower"] }
-http-body-util = "0.1"
-uuid = { version = "1.6", features = ["v4"] }
-tower = "0.4"
-
-[[bin]]
-name = "server"
-path = "src/services/server.rs"
+tracing-subscriber = "0.3"
+openssl-sys = { version = "0.9.106", features = ["vendored"] }
 
 [[bin]]
 name = "{{project-name}}_lambda"
 path = "src/services/lambda.rs"
 
 [lib]
-name = "{{crate_name}}"
+name = "{{project-name}}"
 path = "src/lib.rs" 

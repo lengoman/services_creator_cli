@@ -1,64 +1,91 @@
-use rust_qr_generator::{
-    common::validation::RapidApiConfig,
-    routes::create_router,
+use {{project-name}}::common::validation::RapidApiConfig;
+use {{project-name}}::routes::create_router;
+use axum::{
+    routing::get,
+    Router,
 };
-use clap::Parser;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use num_cpus::get;
+use tokio::signal;
+use tower_http::cors::CorsLayer;
 
-#[derive(Parser, Debug)]
+#[derive(clap::Parser)]
 #[command(author, version, about, long_about = None)]
 struct Args {
+    /// Port to listen on
     #[arg(short, long, default_value_t = 3010)]
     port: u16,
+
+    /// Number of worker threads
+    #[arg(short, long)]
     workers: Option<usize>,
 }
 
 #[tokio::main]
 async fn main() {
-    let args = Args::parse();
-    let num_workers = args.workers.unwrap_or_else(num_cpus::get);
+    // Initialize logging
+    env_logger::init();
 
-    let _runtime = tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(num_workers)
+    // Parse command line arguments
+    let args = Args::parse();
+
+    // Set up multi-threaded runtime
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(args.workers.unwrap_or_else(|| {
+            std::thread::available_parallelism()
+                .map(|p| p.get())
+                .unwrap_or(1)
+        }))
         .enable_all()
         .build()
-        .unwrap();
+        .expect("Failed to create Tokio runtime");
 
-    // Configure RapidAPI settings
-    let rapidapi_config = Arc::new(RapidApiConfig::new(
-        "6f79849e04msh105d56a90bc7568p11ccd6jsn0c8c9c6fde05",
-        "059fe2c0-adcd-11ef-9c3f-a75c3ffbbfe4",
-        "qr-code-generator-logo.p.rapidapi.com"
-    ));
+    runtime.block_on(async {
+        // Configure RapidAPI settings from environment variables
+        let rapidapi_config = Arc::new(
+            RapidApiConfig::from_env()
+                .expect("Failed to load RapidAPI configuration from environment variables")
+        );
 
-    let app = create_router(rapidapi_config);
+        // Create router
+        let app = create_router(rapidapi_config)
+            .layer(CorsLayer::permissive());
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], args.port));
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap_or_else(|e| {
-        eprintln!("Failed to bind to port {}: {}", args.port, e);
-        std::process::exit(1);
+        // Create TCP listener
+        let addr = SocketAddr::from(([127, 0, 0, 1], args.port));
+        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+        println!("Listening on {}", addr);
+
+        // Start server
+        axum::serve(listener, app)
+            .with_graceful_shutdown(shutdown_signal())
+            .await
+            .unwrap();
     });
-
-    println!("Server running on {} with {} worker threads", addr, num_workers);
-
-    let server = axum::serve(
-        listener,
-        app.into_make_service_with_connect_info::<SocketAddr>(),
-    )
-        .with_graceful_shutdown(shutdown_signal())
-        .tcp_nodelay(true);
-
-    if let Err(e) = server.await {
-        eprintln!("Server error: {}", e);
-        std::process::exit(1);
-    }
 }
 
 async fn shutdown_signal() {
-    tokio::signal::ctrl_c()
-        .await
-        .expect("Failed to install CTRL+C signal handler");
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("Failed to listen for ctrl+c");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("Failed to install SIGTERM handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
     println!("Shutting down server...");
 }
